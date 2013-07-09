@@ -5,9 +5,12 @@ import android.app.Activity
 import android.os.Bundle
 import android.view.{View, KeyEvent}
 import com.google.gson.Gson
-import android.widget.AutoCompleteTextView
+import android.widget.{AdapterView, AutoCompleteTextView}
 import java.io.{File, BufferedReader, FileReader }
 import Helper._
+import java.text.SimpleDateFormat
+import java.util.Date
+import android.view.View.OnLongClickListener
 
 class Item  {
   var Item1 = ""
@@ -34,6 +37,15 @@ class SelfTrack extends Activity {
 
   def Round(x:Double) = ((x * 10).round:Double) / 10.0
 
+	def strToDate(dstr:String) : Date ={
+		val stripmicrosecs = dstr.substring(0,dstr.indexOf("."))
+		dateRead.parse(stripmicrosecs)
+	}
+
+	def subtractDateToHours(d1:Date, d2:Date):Double = (d1.getTime - d2.getTime)/3600000.0
+
+	var dateRead : java.text.SimpleDateFormat = null
+
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.main)
@@ -46,34 +58,32 @@ class SelfTrack extends Activity {
     val itype = new com.google.gson.reflect.TypeToken[java.util.ArrayList[Item]]{}.getType
 
     val dateWrite = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SZ")
-    val dateRead = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
+    dateRead = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
 
-    val dir = android.os.Environment.getExternalStorageDirectory()
-    val file = dir.getAbsolutePath() + "/Documents/activities.txt"
+    val dir = android.os.Environment.getExternalStorageDirectory
+    val file = dir.getAbsolutePath + "/Documents/activities.txt"
     val br = new BufferedReader(new FileReader(file))
     val actions = gson.fromJson[java.util.ArrayList[Item]](br, itype)
     br.close()
 
     val suggestions = new java.util.ArrayList(actions.map(item => item.Item2).toSet)
-    val today = new java.util.Date()
+    val today = new Date()
 
     val rview = new java.util.ArrayList(
                      actions.take(100).map(item => {
-                                val dstr = item.Item1
-                                val stripmicrosecs = dstr.substring(0,dstr.indexOf("."))
-                                val actdate = dateRead.parse(stripmicrosecs)
+                                val actdate = strToDate(item.Item1)
 
                                 val (dayspassed, unitofTime) = { val delta : Double = (today.getTime() - actdate.getTime())
                                                                  val tdays = Round (delta / 86400000.0)
                                                                  if (tdays < 1.0) (Round(delta/3600000.0), "hours") else (tdays, "days")}
-                                dayspassed.toString() + " " + unitofTime + " ago | " + item.Item2}))
+                                dayspassed.toString + " " + unitofTime + " ago | " + item.Item2}))
 
     val lview = rview.clone().asInstanceOf[java.util.ArrayList[String]]
     val adapter = new android.widget.ArrayAdapter(this,android.R.layout.simple_expandable_list_item_1, lview)
     viewList.setAdapter(adapter)
 
     val adapterSuggest = new android.widget.ArrayAdapter(this,android.R.layout.simple_dropdown_item_1line, suggestions)
-    suggestbox.setAdapter(adapterSuggest);
+    suggestbox.setAdapter(adapterSuggest)
 
     suggestbox.addTextChangedListener(new android.text.TextWatcher() {
       def afterTextChanged(s : android.text.Editable){
@@ -96,17 +106,31 @@ class SelfTrack extends Activity {
       adapter.notifyDataSetChanged()
     })
 
+	  suggestbox.setOnLongClickListener(new OnLongClickListener() {
+		  def onLongClick(v: View): Boolean ={suggestbox.setText(""); true}
+	  })
+
     viewList.setOnItemClickListener(new android.widget.AdapterView.OnItemClickListener() {
        override def onItemClick(parent: android.widget.AdapterView[_], view: View, position : Int, id : Long) {
           val str =  viewList.getItemAtPosition(position).asInstanceOf[String]
+	        val did = str.split("\\|")(1).trim()
           val i_ = str.indexOf("hours")
           val (i, dayadj) = if (i_ == -1) (str.indexOf("days"), 24.0) else (i_ , 1.0)
+
           if(i != -1){
             val adj = java.lang.Double.parseDouble(str.substring(0,i - 1))
             val dateDone = today.addHours(-(adj * dayadj))
-            val toasties = createToast(getApplicationContext(), str.split("\\|")(1).trim() + " was done at: " + dateDone)
+            val toasties = createToast(getApplicationContext, did + " was done at: " + dateDone)
             toasties.show()
           }
+	       else {
+	          val sel = actions(position)
+	          val hoursago = Round(subtractDateToHours(new Date(),strToDate(sel.Item1)))
+	          val toasties = createToast(getApplicationContext, hoursago.toString() + " hours ago.")
+	          toasties.show()
+          }
+
+	       if(suggestbox.getText.length() > 1) suggestbox.setText(did)
       }
     });
   }

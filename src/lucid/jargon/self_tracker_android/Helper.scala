@@ -3,6 +3,7 @@ package lucid.jargon.self_tracker_android
 import android.widget.Toast
 import android.view.View
 import android.content.Context
+import android.view.View.OnLongClickListener
 
 /**
  * Created with IntelliJ IDEA.
