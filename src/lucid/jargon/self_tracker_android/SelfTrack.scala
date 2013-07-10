@@ -3,14 +3,14 @@ package lucid.jargon.self_tracker_android
 import scala.collection.JavaConversions._
 import android.app.Activity
 import android.os.Bundle
-import android.view.{View, KeyEvent}
+import android.view.{View}
 import com.google.gson.Gson
 import android.widget.{AdapterView, AutoCompleteTextView}
-import java.io.{File, BufferedReader, FileReader }
+import java.io.{BufferedReader, FileReader }
 import Helper._
-import java.text.SimpleDateFormat
 import java.util.Date
 import android.view.View.OnLongClickListener
+import android.widget.AdapterView.OnItemLongClickListener
 
 class Item  {
   var Item1 = ""
@@ -44,6 +44,17 @@ class SelfTrack extends Activity {
 
 	def subtractDateToHours(d1:Date, d2:Date):Double = (d1.getTime - d2.getTime)/3600000.0
 
+	def buildActionView (actions:java.util.ArrayList[Item]) ={
+		new java.util.ArrayList(
+			actions.take(100).map(item => {
+				val actdate = strToDate(item.Item1)
+
+				val (dayspassed, unitofTime) = { val delta : Double = new Date().getTime - actdate.getTime
+					val tdays = Round (delta / 86400000.0)
+					if (tdays < 1.0) (Round(delta/3600000.0), "hours") else (tdays, "days")}
+				dayspassed.toString + " " + unitofTime + " ago | " + item.Item2}))
+	}
+
 	var dateRead : java.text.SimpleDateFormat = null
 
   override def onCreate(savedInstanceState: Bundle) {
@@ -69,16 +80,9 @@ class SelfTrack extends Activity {
     val suggestions = new java.util.ArrayList(actions.map(item => item.Item2).toSet)
     val today = new Date()
 
-    val rview = new java.util.ArrayList(
-                     actions.take(100).map(item => {
-                                val actdate = strToDate(item.Item1)
-
-                                val (dayspassed, unitofTime) = { val delta : Double = (today.getTime() - actdate.getTime())
-                                                                 val tdays = Round (delta / 86400000.0)
-                                                                 if (tdays < 1.0) (Round(delta/3600000.0), "hours") else (tdays, "days")}
-                                dayspassed.toString + " " + unitofTime + " ago | " + item.Item2}))
-
+    var rview = buildActionView(actions)
     val lview = rview.clone().asInstanceOf[java.util.ArrayList[String]]
+
     val adapter = new android.widget.ArrayAdapter(this,android.R.layout.simple_expandable_list_item_1, lview)
     viewList.setAdapter(adapter)
 
@@ -108,6 +112,17 @@ class SelfTrack extends Activity {
 
 	  suggestbox.setOnLongClickListener(new OnLongClickListener() {
 		  def onLongClick(v: View): Boolean ={suggestbox.setText(""); true}
+	  })
+
+	  viewList.setOnItemLongClickListener(new OnItemLongClickListener() {
+		  override def onItemLongClick(parent: AdapterView[_], view: View, position: Int, id: Long): Boolean = {
+			  rview = buildActionView(actions)
+			  lview.clear()
+			  rview.foreach(s => lview.add(s))
+
+			  adapter.notifyDataSetChanged()
+			  true
+		  }
 	  })
 
     viewList.setOnItemClickListener(new android.widget.AdapterView.OnItemClickListener() {
