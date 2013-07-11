@@ -56,6 +56,7 @@ class SelfTrack extends Activity {
 	}
 
 	var dateRead : java.text.SimpleDateFormat = null
+	var checkPoint : Option[(java.util.Date,String)] = None
 
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
@@ -101,17 +102,34 @@ class SelfTrack extends Activity {
     })
 
     button.setOnClickListener((v : android.view.View) => {
-      val (d,done) = (dateWrite.format(new java.util.Date()),suggestbox.getText().toString())
-      actions.insert(0, newItem(d, done))
+	    val boxText = suggestbox.getText().toString()
+      val (d,done) = checkPoint match{
+	      case Some(placeHolder @ (oldTime, oldTxt)) if boxText == oldTxt  =>
+		         checkPoint = None
+		         val toasties = createToast(getApplicationContext, "Using version stored at: " + oldTime)
+		         toasties.show()
+		         placeHolder
+	      case None => (new java.util.Date(),boxText)
+      }
+      actions.insert(0, newItem(dateWrite.format(d), done))
       doSave(actions, file, gson)
-      val msg = (new java.util.Date()).toString() + " | " + done
+      val msg = d.toString + " | " + done
       rview.insert(0, msg)
       lview.insert(0,msg)
       adapter.notifyDataSetChanged()
     })
 
+
+	  button.setOnLongClickListener(new OnLongClickListener() {
+		  def onLongClick(v: View): Boolean ={
+			  val toasties = createToast(getApplicationContext, "Stored at current time. Hold Textbox to clear")
+			  toasties.show()
+			  checkPoint = Some(new java.util.Date(),suggestbox.getText().toString())
+			  true}
+	  })
+
 	  suggestbox.setOnLongClickListener(new OnLongClickListener() {
-		  def onLongClick(v: View): Boolean ={suggestbox.setText(""); true}
+		  def onLongClick(v: View): Boolean ={suggestbox.setText(""); checkPoint=None; true}
 	  })
 
 	  viewList.setOnItemLongClickListener(new OnItemLongClickListener() {
