@@ -34,7 +34,7 @@ out/
 pro*logs/
 .idea/
 gen/
-
+appkeys.xml
 
 #################
 ## Visual Studio
