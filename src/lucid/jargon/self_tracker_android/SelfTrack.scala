@@ -3,14 +3,15 @@ package lucid.jargon.self_tracker_android
 import scala.collection.JavaConversions._
 import android.app.Activity
 import android.os.Bundle
-import android.view.{View}
+import android.view.{MenuItem, View, Menu}
 import com.google.gson.Gson
-import android.widget.{AdapterView, AutoCompleteTextView}
+import android.widget.{ArrayAdapter, AdapterView, AutoCompleteTextView}
 import java.io.{BufferedReader, FileReader }
 import Helper._
 import java.util.Date
 import android.view.View.OnLongClickListener
 import android.widget.AdapterView.OnItemLongClickListener
+import android.content.Intent
 
 class Item  {
   var Item1 = ""
@@ -18,31 +19,29 @@ class Item  {
 }
 
 class SelfTrack extends Activity {
-  /**
-   * Called when the activity is first created.
-   */
 
-  def newItem(date:String, str:String):Item = {
-      val i = new Item
-      i.Item1 = date; i.Item2 = str
-      i
-  }
+	var dateRead : java.text.SimpleDateFormat = null
+	var checkPoint : Option[(java.util.Date,String)] = None
+	val itype = new com.google.gson.reflect.TypeToken[java.util.ArrayList[Item]]{}.getType
+	var gson: Gson = new Gson()
+	var isconn = false
+	var file = ""
 
-  def doSave(a: java.util.ArrayList[Item], fname: String, gson : Gson) =  {
-       val json = gson.toJson(a)
-       val writer = new java.io.FileWriter(fname)
-       writer.write(json)
-       writer.close()
-  }
+	var actions : java.util.ArrayList[Item] = null
+	var lview : java.util.ArrayList[String] = null
+	var rview : java.util.ArrayList[String] = null
+	var adapter : ArrayAdapter[String] = null
 
-  def Round(x:Double) = ((x * 10).round:Double) / 10.0
+	def newItem(date:String, str:String):Item = {
+		val i = new Item
+		i.Item1 = date; i.Item2 = str
+		i
+	}
 
 	def strToDate(dstr:String) : Date ={
 		val stripmicrosecs = dstr.substring(0,dstr.indexOf("."))
 		dateRead.parse(stripmicrosecs)
 	}
-
-	def subtractDateToHours(d1:Date, d2:Date):Double = (d1.getTime - d2.getTime)/3600000.0
 
 	def buildActionView (actions:java.util.ArrayList[Item]) ={
 		new java.util.ArrayList(
@@ -55,8 +54,58 @@ class SelfTrack extends Activity {
 				dayspassed.toString + " " + unitofTime + " ago | " + item.Item2}))
 	}
 
-	var dateRead : java.text.SimpleDateFormat = null
-	var checkPoint : Option[(java.util.Date,String)] = None
+	def doRefresh(){
+		rview = buildActionView(actions)
+		lview.clear()
+		rview.foreach(s => lview.add(s))
+
+		adapter.notifyDataSetChanged()
+	}
+
+	def launchIntent(command:String, data : String){
+		val myIntent = new Intent()
+		myIntent.setAction("lucid.jargon."+ command)
+		myIntent.putExtra("lucid.jargon.dropbox-"+command, data)
+
+		try{startActivityForResult(myIntent, 0)}
+		catch {
+			case ex =>
+				val s = ex.getMessage
+				createToast(getApplicationContext, "Dropbox Sync Tracker app not found.")}
+	}
+
+	/////////////////////EVENTS RESPONSE////////////////////////////////////////
+
+	override def onOptionsItemSelected(item: MenuItem): Boolean = {
+	    item.getItemId match {
+		    case R.id.menu_upload => launchIntent("doUpload", gson.toJson(actions))
+		    case R.id.refresh => launchIntent("doDownload","")
+	    }
+		true
+	}
+
+	 override def onActivityResult(requestCode:Int, resultCode:Int, data:Intent) {
+		if (requestCode == 0) {
+			if (resultCode == Activity.RESULT_OK) {
+				if(data.hasExtra("downloaded")){
+						val content = data.getStringExtra("downloaded")
+						actions = gson.fromJson[java.util.ArrayList[Item]](content, itype)
+					  doRefresh()
+					  doSave(actions, file, gson)
+	     			createToast(getApplicationContext, "Refreshed").show()}
+				else if(data.hasExtra("uploaded")) {createToast(getApplicationContext, "Uploaded").show()}
+				else{createToast(getApplicationContext, "WTF?").show()}}
+			else {
+				createToast(getApplicationContext, "something went wrong").show()}}
+		else {
+			super.onActivityResult(requestCode, resultCode, data)}
+	}
+
+	override def  onCreateOptionsMenu(menu: Menu):Boolean ={
+		val menuInflater = getMenuInflater
+		menuInflater.inflate(R.menu.menu, menu)
+		true
+	}
 
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
@@ -66,26 +115,25 @@ class SelfTrack extends Activity {
     val viewList = findViewById(R.id.listView).asInstanceOf[android.widget.ListView]
     val button = findViewById(R.id.buttonAdd).asInstanceOf[android.widget.Button]
 
-    val gson = new Gson()
-    val itype = new com.google.gson.reflect.TypeToken[java.util.ArrayList[Item]]{}.getType
+	  val today = new Date()
+	  val dateWrite = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SZ")
+	  dateRead = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
 
-    val dateWrite = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SZ")
-    dateRead = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
+	  val dir = android.os.Environment.getExternalStorageDirectory
+	  file = dir.getAbsolutePath + "/Documents/activities.txt"
 
-    val dir = android.os.Environment.getExternalStorageDirectory
-    val file = dir.getAbsolutePath + "/Documents/activities.txt"
     val br = new BufferedReader(new FileReader(file))
-    val actions = gson.fromJson[java.util.ArrayList[Item]](br, itype)
+    actions = gson.fromJson[java.util.ArrayList[Item]](br, itype)
     br.close()
 
     val suggestions = new java.util.ArrayList(actions.map(item => item.Item2).toSet)
-    val today = new Date()
 
-    var rview = buildActionView(actions)
-    val lview = rview.clone().asInstanceOf[java.util.ArrayList[String]]
+    rview = buildActionView(actions)
+    lview = rview.clone().asInstanceOf[java.util.ArrayList[String]]
 
-    val adapter = new android.widget.ArrayAdapter(this,android.R.layout.simple_expandable_list_item_1, lview)
-    viewList.setAdapter(adapter)
+	  //***********************************TEXTBOX**************************//
+
+	  suggestbox.setThreshold(3)
 
     val adapterSuggest = new android.widget.ArrayAdapter(this,android.R.layout.simple_dropdown_item_1line, suggestions)
     suggestbox.setAdapter(adapterSuggest)
@@ -93,7 +141,7 @@ class SelfTrack extends Activity {
     suggestbox.addTextChangedListener(new android.text.TextWatcher() {
       def afterTextChanged(s : android.text.Editable){
         lview.clear()
-        rview.foreach( s => { val keep = s contains suggestbox.getText().toString()
+        rview.foreach( s => { val keep = s contains suggestbox.getText.toString
                               if (keep) lview.add(s) })
         adapter.notifyDataSetChanged()
       }
@@ -101,6 +149,11 @@ class SelfTrack extends Activity {
       def onTextChanged(s:java.lang.CharSequence, start:Int, before : Int, count:Int){}
     })
 
+	  suggestbox.setOnLongClickListener(new OnLongClickListener() {
+		  def onLongClick(v: View): Boolean ={suggestbox.setText(""); checkPoint=None; true}
+	  })
+
+	  //***********************************BUTTONS**************************//
     button.setOnClickListener((v : android.view.View) => {
 	    val boxText = suggestbox.getText().toString()
       val (d,done) = checkPoint match{
@@ -119,7 +172,6 @@ class SelfTrack extends Activity {
       adapter.notifyDataSetChanged()
     })
 
-
 	  button.setOnLongClickListener(new OnLongClickListener() {
 		  def onLongClick(v: View): Boolean ={
 			  val toasties = createToast(getApplicationContext, "Stored at current time. Hold Textbox to clear")
@@ -128,17 +180,14 @@ class SelfTrack extends Activity {
 			  true}
 	  })
 
-	  suggestbox.setOnLongClickListener(new OnLongClickListener() {
-		  def onLongClick(v: View): Boolean ={suggestbox.setText(""); checkPoint=None; true}
-	  })
+	  //***********************************VIEW LIST**************************//
+
+	  adapter = new android.widget.ArrayAdapter(this,android.R.layout.simple_expandable_list_item_1, lview)
+	  viewList.setAdapter(adapter)
 
 	  viewList.setOnItemLongClickListener(new OnItemLongClickListener() {
 		  override def onItemLongClick(parent: AdapterView[_], view: View, position: Int, id: Long): Boolean = {
-			  rview = buildActionView(actions)
-			  lview.clear()
-			  rview.foreach(s => lview.add(s))
-
-			  adapter.notifyDataSetChanged()
+			  doRefresh()
 			  true
 		  }
 	  })
@@ -163,8 +212,8 @@ class SelfTrack extends Activity {
 	          toasties.show()
           }
 
-	       if(suggestbox.getText.length() > 1) suggestbox.setText(did)
+	       if(suggestbox.getText.length() > 0) suggestbox.setText(did)
       }
-    });
+    })
   }
 }

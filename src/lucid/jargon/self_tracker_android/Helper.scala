@@ -4,6 +4,8 @@ import android.widget.Toast
 import android.view.View
 import android.content.Context
 import android.view.View.OnLongClickListener
+import java.util.Date
+import com.google.gson.Gson
 
 /**
  * Created with IntelliJ IDEA.
@@ -34,4 +36,15 @@ object Helper {
     new Runnable() {
       def run() = f
     }
+
+  def Round(x:Double) = ((x * 10).round:Double) / 10.0
+
+	def subtractDateToHours(d1:Date, d2:Date):Double = (d1.getTime - d2.getTime)/3600000.0
+
+	def doSave(a: java.util.ArrayList[Item], fname: String, gson : Gson) =  {
+		val json = gson.toJson(a)
+		val writer = new java.io.FileWriter(fname)
+		writer.write(json)
+		writer.close()
+	}
 }
