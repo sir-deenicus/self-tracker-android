@@ -26,7 +26,7 @@ object Helper {
       }
     }
 
-  def createToast(context: Context,  text : String, duration : Int = Toast.LENGTH_LONG) : Toast  = {
+  def createToast(context: Context,  text : String, duration : Int = Toast.LENGTH_LONG) : Toast = {
     Toast.makeText(context, text, duration)
   }
 
@@ -38,8 +38,11 @@ object Helper {
     }
 
   def Round(x:Double) = ((x * 10).round:Double) / 10.0
+	def Round2(x:Double, places : Int) = {((x * places).round:Double) / places.toDouble }
 
 	def subtractDateToHours(d1:Date, d2:Date):Double = (d1.getTime - d2.getTime)/3600000.0
+
+	def subtractDateToSeconds(d1:Date, d2:Date):Double = (d1.getTime - d2.getTime)/1000.
 
 	def doSave(a: java.util.ArrayList[Item], fname: String, gson : Gson) =  {
 		val json = gson.toJson(a)

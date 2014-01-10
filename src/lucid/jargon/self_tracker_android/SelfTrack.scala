@@ -78,8 +78,11 @@ class SelfTrack extends Activity {
 
 	override def onOptionsItemSelected(item: MenuItem): Boolean = {
 	    item.getItemId match {
-		    case R.id.menu_upload => launchIntent("doUpload", gson.toJson(actions))
-		    case R.id.refresh => launchIntent("doDownload","")
+		    case R.id.menu_location =>
+			      val myIntent = new Intent(this, classOf[LocationUtils])
+	          startActivity(myIntent)
+		    /*case R.id.menu_upload => launchIntent("doUpload", gson.toJson(actions))
+		    case R.id.refresh => launchIntent("doDownload","")*/
 	    }
 		true
 	}
@@ -101,7 +104,7 @@ class SelfTrack extends Activity {
 			super.onActivityResult(requestCode, resultCode, data)}
 	}
 
-	override def  onCreateOptionsMenu(menu: Menu):Boolean ={
+	override def onCreateOptionsMenu(menu: Menu):Boolean ={
 		val menuInflater = getMenuInflater
 		menuInflater.inflate(R.menu.menu, menu)
 		true

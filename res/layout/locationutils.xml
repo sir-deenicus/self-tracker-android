@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:orientation="vertical"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent">
+
+    <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="press start walking to begin..."
+            android:id="@+id/textViewLoc" android:layout_gravity="center" android:layout_margin="5dp"/>
+    <CheckBox
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Update every few seconds (instead of every few minutes)"
+            android:id="@+id/checkBoxUpdateFreq" android:layout_gravity="center|left" android:layout_margin="5dp"/>
+    <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content" android:layout_gravity="right|center_vertical">
+        <AutoCompleteTextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:id="@+id/autoCompleteTextViewLocs" android:layout_gravity="left|center_vertical" android:layout_weight="1" android:autoText="false"
+                android:layout_margin="5dp"/>
+        <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Add Location"
+                android:id="@+id/buttonAddLoc" android:layout_gravity="top"/>
+    </LinearLayout>
+
+
+    <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content" android:layout_gravity="left|center_vertical">
+        <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Start Walk"
+                android:id="@+id/buttonStartWalk" android:layout_gravity="top" android:layout_margin="5dp"/>
+        <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="End Walk"
+                android:id="@+id/buttonEndWalk" android:layout_gravity="left|top" android:layout_margin="5dp"/>
+    </LinearLayout>
+</LinearLayout>
