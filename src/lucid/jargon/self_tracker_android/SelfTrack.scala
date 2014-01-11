@@ -20,7 +20,6 @@ class Item  {
 
 class SelfTrack extends Activity {
 
-	var dateRead : java.text.SimpleDateFormat = null
 	var checkPoint : Option[(java.util.Date,String)] = None
 	val itype = new com.google.gson.reflect.TypeToken[java.util.ArrayList[Item]]{}.getType
 	var gson: Gson = new Gson()
@@ -36,11 +35,6 @@ class SelfTrack extends Activity {
 		val i = new Item
 		i.Item1 = date; i.Item2 = str
 		i
-	}
-
-	def strToDate(dstr:String) : Date ={
-		val stripmicrosecs = dstr.substring(0,dstr.indexOf("."))
-		dateRead.parse(stripmicrosecs)
 	}
 
 	def buildActionView (actions:java.util.ArrayList[Item]) ={
@@ -94,7 +88,7 @@ class SelfTrack extends Activity {
 						val content = data.getStringExtra("downloaded")
 						actions = gson.fromJson[java.util.ArrayList[Item]](content, itype)
 					  doRefresh()
-					  doSave(actions, file, gson)
+					doSaveActivities(actions, file, gson)
 	     			createToast(getApplicationContext, "Refreshed").show()}
 				else if(data.hasExtra("uploaded")) {createToast(getApplicationContext, "Uploaded").show()}
 				else{createToast(getApplicationContext, "WTF?").show()}}
@@ -119,8 +113,6 @@ class SelfTrack extends Activity {
     val button = findViewById(R.id.buttonAdd).asInstanceOf[android.widget.Button]
 
 	  val today = new Date()
-	  val dateWrite = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SZ")
-	  dateRead = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
 
 	  val dir = android.os.Environment.getExternalStorageDirectory
 	  file = dir.getAbsolutePath + "/Documents/activities.txt"
@@ -168,7 +160,7 @@ class SelfTrack extends Activity {
 	      case None => (new java.util.Date(),boxText)
       }
       actions.insert(0, newItem(dateWrite.format(d), done))
-      doSave(actions, file, gson)
+	    doSaveActivities(actions, file, gson)
       val msg = d.toString + " | " + done
       rview.insert(0, msg)
       lview.insert(0,msg)
