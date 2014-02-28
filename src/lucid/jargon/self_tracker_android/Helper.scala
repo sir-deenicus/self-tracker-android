@@ -22,7 +22,6 @@ class UsefulDate(time : java.util.Date) {
 }
 
 object Helper {
-
 	val dateWrite = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SZ")
 	val dateRead = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
 

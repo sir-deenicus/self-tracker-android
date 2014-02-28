@@ -7,7 +7,7 @@ import android.location.{LocationListener, Location, LocationManager}
 import android.widget.{AutoCompleteTextView, CheckBox, TextView}
 import android.speech.tts.TextToSpeech
 import Helper._
-import java.util.Date
+import java.util.{TimeZone, Calendar, Date}
 import scala.collection.mutable
 import java.io.File
 import java.util
@@ -54,14 +54,26 @@ class LocationUtils extends Activity with TextToSpeech.OnInitListener {
 		   Radius * c
 	}
 
-	def load(fileLocs : String) : (util.HashMap[String, Geo], util.ArrayList[String]) = {
+	def load(fileLocs : String, fileTimes : String) : (util.HashMap[String, Geo], util.ArrayList[String], Double) = {
+		val localCalendar = Calendar.getInstance(TimeZone.getDefault())
+		val day = localCalendar.get(Calendar.DAY_OF_YEAR)
+		val year = localCalendar.get(Calendar.YEAR)
+
+		def getDate(d:Date, dateType:Int)={
+			val cal = Calendar.getInstance()
+			cal.setTime(d)
+			cal.get(dateType)
+		}
 
 		if(new File(fileLocs).isFile)   {
-		/*	val dists = readAllLinesMap(s => {
+			val dists = readAllLinesMap(s => {
 				     val spl = s.split(";;")
-				     val dist = spl(2).toDouble
-				     new WalkDist(DateStart = spl(0),spl(1),dist)
-			}, fileTimes)*/
+				     val dist = Double.parseDouble(spl(2))
+						 val d1 = dateRead.parse(spl(0))
+						(d1,dist)
+			}, fileTimes)
+
+			val tot = dists.filter((kv) => getDate(kv._1, Calendar.DAY_OF_YEAR) == day && getDate(kv._1, Calendar.YEAR) == year).foldLeft(0.0)((sum,pair) => sum + pair._2)
 
 			val locs = readAllLinesMap(identity, fileLocs)
 			val hmap = new util.HashMap[String,Geo]()
@@ -72,9 +84,17 @@ class LocationUtils extends Activity with TextToSpeech.OnInitListener {
 				locnames.add(spl(0))
 				hmap.put(spl(0), new Geo(Latitude = Double.parseDouble(spl(1)), Longitude = Double.parseDouble(spl(2))))
 			})
-			(hmap,locnames)
+			(hmap,locnames, tot)
 		}
-		else (new util.HashMap(),new util.ArrayList[String]())
+		else (new util.HashMap(),new util.ArrayList[String](), 0.0)
+	}
+
+	var locationManager:LocationManager = null
+	var locationListener : LocationListener = null
+
+	def changeRate(urate:Int)={
+		locationManager.removeUpdates(locationListener);
+		locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, urate,	0, locationListener)
 	}
 
 	override def onCreate(savedInstanceState: Bundle) {
@@ -86,10 +106,11 @@ class LocationUtils extends Activity with TextToSpeech.OnInitListener {
 		val fileLocs = dir.getAbsolutePath + "/Documents/geolocmap.txt"
 		val fileTimes = dir.getAbsolutePath + "/Documents/timedists.txt"
 
-		val (locmap,locnames) = load(fileLocs)
+		val (locmap,locnames, tday) = load(fileLocs, fileTimes)
+		var totWalkedDay = tday
 
 	  var (lastLong, lastLat,totDist, lastUpdate) = (-1.0,-1.0, 0.0, 0)
-		val locationManager = getSystemService(Context.LOCATION_SERVICE).asInstanceOf[LocationManager]
+		locationManager = getSystemService(Context.LOCATION_SERVICE).asInstanceOf[LocationManager]
 
 		val mgr = getSystemService(Context.POWER_SERVICE).asInstanceOf[PowerManager]
 		val wakeLock = mgr.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyWakeLock")
@@ -100,7 +121,10 @@ class LocationUtils extends Activity with TextToSpeech.OnInitListener {
 		val buttonAddLoc = findViewById(R.id.buttonAddLoc).asInstanceOf[android.widget.Button]
 		val checkboxfreq = findViewById(R.id.checkBoxUpdateFreq).asInstanceOf[CheckBox]
 		val txtv = findViewById(R.id.textViewLoc).asInstanceOf[TextView]
+		val totWalkedView = findViewById(R.id.textViewTotWalked).asInstanceOf[TextView]
 		val txtLoc = findViewById(R.id.autoCompleteTextViewLocs).asInstanceOf[AutoCompleteTextView]
+
+		totWalkedView.setText("Total Walked Today: " + totWalkedDay + " meters")
 
 		val avgspeeds = mutable.MutableList[Double]()
 		var inputLoc = ""
@@ -123,7 +147,7 @@ class LocationUtils extends Activity with TextToSpeech.OnInitListener {
 		}
 
    // Define a listener that responds to location updates
-		val locationListener = new LocationListener() {
+	locationListener = new LocationListener() {
 			def onLocationChanged(location:Location) {
 
 				val (lat, long) = (location.getLatitude, location.getLongitude)
@@ -135,6 +159,7 @@ class LocationUtils extends Activity with TextToSpeech.OnInitListener {
 						                   if (iscalibrated) mdist_
 		                           else {
 			                            iscalibrated = mdist_ < 2.0
+							                    if (iscalibrated) changeRate(urate)
 			                            lastTime = new Date()
 			                            0.0 }
 
@@ -142,8 +167,11 @@ class LocationUtils extends Activity with TextToSpeech.OnInitListener {
 													mdist.toString}
 
 				if (iscalibrated){
-					 val v = Round2(location.getSpeed,2)
-					 txtv.setText("loc: " + lat + "," + long + "; speed: " + v + "m/sec dist: " + diststr + "m " + "Total Dist: " + totDist + "m. Dist Left: " + Round2(calcDistLeft(),2)) }
+					 val vel = Round2(avgspeeds.foldLeft(0.0)(_+_) / avgspeeds.length,2)
+					 val d = calcDistLeft()
+					 val elapsed = Round(subtractDateToSeconds(new Date(), walkStarted)/60.0)
+					 val estm = if (vel == 0.0) "unknown" else {Round2((d/vel)/60., 2) + " minutes to go."}
+					 txtv.setText("loc: " + lat + "," + long + "; inst speed: " + vel + "m/sec dist: " + diststr + "m " + "Total Dist: " + totDist + "m. Dist Left: " + Round2(d,2) + ". Time left: " + estm + ". Elapsed Time: " + elapsed) }
 			  else txtv.setText("please stay still. calibrating...claimed: " + diststr + "m/sec")
 
 				lastUpdate += urate
@@ -155,12 +183,12 @@ class LocationUtils extends Activity with TextToSpeech.OnInitListener {
 
 					val v = deltax / deltat
 					avgspeeds += v
-					val a = Round(avgspeeds.foldLeft(0.0)(_+_) / avgspeeds.length)
+					val a = Round2(avgspeeds.foldLeft(0.0)(_+_) / avgspeeds.length,2)
 					val timeleft = Round((dleft / a)/ 60.0)
 					val elapsed = Round(subtractDateToSeconds(new Date(), walkStarted)/60.0)
 					val dmsg = if (dleft < 0.0) -dleft + " meters over target." else dleft + " meters to go."
 					val dtime = if (a == 0.0) "unknown arrival time. " else if (timeleft < 0) "Over estimate by " + -timeleft + " minutes. " else "Arrival in " + timeleft + " minutes."
-					speakSynth.speak("Total distance walked is : " + totDist + " meters. " + dmsg +  " Average speed is " + a + " m per second. " + dtime + " Elapsed time: " + elapsed, TextToSpeech.QUEUE_ADD, null)
+					speakSynth.speak("Total distance walked is : " + totDist + " meters. " + dmsg +  " Average speed is " + a + " m per second. " + dtime + " Elapsed time: " + elapsed + " minutes", TextToSpeech.QUEUE_ADD, null)
 
 					lastUpdate = 0
 					lastTot = totDist
@@ -237,7 +265,8 @@ class LocationUtils extends Activity with TextToSpeech.OnInitListener {
 					val wend = dateWrite.format(new Date())
 
 					writeAllLines(fileTimes,Array(wstart + ";;" + wend + ";;" + totDist))
-
+					totWalkedDay += totDist
+					totWalkedView.setText("Total Walked Today: " + totWalkedDay + " meters")//
 					//dists.add(new WalkDist(DateStart = wstart, DateEnd = wend, Dists = totDist)
 					wakeLock.release()
 					iscalibrated = false}
@@ -245,37 +274,38 @@ class LocationUtils extends Activity with TextToSpeech.OnInitListener {
 
 	buttonStartWalk.setOnClickListener(
 			(v : android.view.View) => {
-				try{
-					inputLoc = txtLoc.getText.toString
-					isNum = inputLoc.forall (c => c.isDigit)
+				if(!iscalibrated){
+					try{
+						val inptxt = txtLoc.getText.toString
+						inputLoc = if (inptxt == "") "100" else inptxt
+						isNum = inputLoc.forall (c => c.isDigit)
 
-					if (isNum || locmap.containsKey(inputLoc))
-					{
-						if (isNum) reqDist =  Integer.parseInt(inputLoc) else targetGeo = locmap.get(inputLoc)
+						if (isNum || locmap.containsKey(inputLoc)){
+							if (isNum) reqDist =  Integer.parseInt(inputLoc) else targetGeo = locmap.get(inputLoc)
 
-						txtv.setText("acquiring sats...")
-						wakeLock.acquire()
-						avgspeeds.clear()
-						lastTot = 0.0
-						walkStarted = new Date()
+							txtv.setText("acquiring sats...")
+							wakeLock.acquire()
+							avgspeeds.clear()
+							lastTot = 0.0
+							walkStarted = new Date()
 
-						lastLong -1.0; lastLat = -1.0; totDist = 0.0; lastUpdate = 0
-						if (checkboxfreq.isChecked) {
-							urate = 2000
-							speakrate =  30000}
-						else {
-							urate = 20000
-							speakrate = 60000}
+							lastLong -1.0; lastLat = -1.0; totDist = 0.0; lastUpdate = 0
+							if (checkboxfreq.isChecked) {
+								urate = 2000
+								speakrate = 30000}
+							else{
+								urate = 20000
+								speakrate = 60000}
 
-						locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, urate,	0, locationListener)}
-				  else{
-						createToast(getApplicationContext, "invalid loc").show
-					}
-				}
-			catch{
-				case ex =>
-					val txtv = findViewById(R.id.textViewLoc).asInstanceOf[TextView]
-					txtv.setText(ex.getMessage)}})
+							locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0,	0, locationListener)}
+					  else{
+							createToast(getApplicationContext, "invalid loc").show}}
+				  catch{
+						case ex =>
+							val txtv = findViewById(R.id.textViewLoc).asInstanceOf[TextView]
+							txtv.setText(ex.getMessage)}}
+			else createToast(getApplicationContext, "already running.").show
+			})
 	}
 }
 

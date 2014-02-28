@@ -14,7 +14,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Update every few seconds (instead of every few minutes)"
-            android:id="@+id/checkBoxUpdateFreq" android:layout_gravity="center|left" android:layout_margin="5dp"/>
+            android:id="@+id/checkBoxUpdateFreq" android:layout_gravity="center|left" android:layout_margin="5dp"
+            android:checked="true"/>
     <LinearLayout
             android:orientation="horizontal"
             android:layout_width="fill_parent"
@@ -53,5 +54,12 @@
                 android:text="Cancel"
                 android:id="@+id/buttonCancelWalk" android:layout_gravity="top" android:layout_marginLeft="2dp"
                 android:layout_marginRight="4dp"/>
+
     </LinearLayout>
+    <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Total Walked Today: "
+            android:id="@+id/textViewTotWalked" android:layout_gravity="left" android:layout_marginLeft="5dp"
+            android:layout_marginTop="5dp"/>
 </LinearLayout>
