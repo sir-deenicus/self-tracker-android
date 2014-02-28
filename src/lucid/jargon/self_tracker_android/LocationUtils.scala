@@ -259,7 +259,7 @@ class LocationUtils extends Activity with TextToSpeech.OnInitListener {
 	buttonEndWalk.setOnClickListener(
 			(v : android.view.View) => {
 				if(iscalibrated){
-					txtv.setText("start walk to begin again.")
+					txtv.setText(txtv.getText() + "\n--------------\nstart walk to begin again.")
 					locationManager.removeUpdates(locationListener)
 					val wstart = dateWrite.format(walkStarted)
 					val wend = dateWrite.format(new Date())
