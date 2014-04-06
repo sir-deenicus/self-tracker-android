@@ -19,7 +19,6 @@ class Item  {
 }
 
 class SelfTrack extends Activity {
-
 	var checkPoint : Option[(java.util.Date,String)] = None
 	val itype = new com.google.gson.reflect.TypeToken[java.util.ArrayList[Item]]{}.getType
 	var gson: Gson = new Gson()
@@ -54,18 +53,6 @@ class SelfTrack extends Activity {
 		rview.foreach(s => lview.add(s))
 
 		adapter.notifyDataSetChanged()
-	}
-
-	def launchIntent(command:String, data : String){
-		val myIntent = new Intent()
-		myIntent.setAction("lucid.jargon."+ command)
-		myIntent.putExtra("lucid.jargon.dropbox-"+command, data)
-
-		try{startActivityForResult(myIntent, 0)}
-		catch {
-			case ex =>
-				val s = ex.getMessage
-				createToast(getApplicationContext, "Dropbox Sync Tracker app not found.")}
 	}
 
 	/////////////////////EVENTS RESPONSE////////////////////////////////////////
@@ -150,7 +137,7 @@ class SelfTrack extends Activity {
 
 	  //***********************************BUTTONS**************************//
     button.setOnClickListener((v : android.view.View) => {
-	    val boxText = suggestbox.getText().toString()
+	    val boxText = suggestbox.getText.toString
       val (d,done) = checkPoint match{
 	      case Some(placeHolder @ (oldTime, oldTxt)) if boxText == oldTxt  =>
 		         checkPoint = None
@@ -171,7 +158,7 @@ class SelfTrack extends Activity {
 		  def onLongClick(v: View): Boolean ={
 			  val toasties = createToast(getApplicationContext, "Stored at current time. Hold Textbox to clear")
 			  toasties.show()
-			  checkPoint = Some(new java.util.Date(),suggestbox.getText().toString())
+			  checkPoint = Some(new java.util.Date(),suggestbox.getText.toString)
 			  true}
 	  })
 
@@ -203,7 +190,7 @@ class SelfTrack extends Activity {
 	       else {
 	          val sel = actions(position)
 	          val hoursago = Round(subtractDateToHours(new Date(),strToDate(sel.Item1)))
-	          val toasties = createToast(getApplicationContext, hoursago.toString() + " hours ago.")
+	          val toasties = createToast(getApplicationContext, hoursago.toString + " hours ago.")
 	          toasties.show()
           }
 

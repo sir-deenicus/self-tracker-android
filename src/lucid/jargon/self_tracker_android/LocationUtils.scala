@@ -55,7 +55,7 @@ class LocationUtils extends Activity with TextToSpeech.OnInitListener {
 	}
 
 	def load(fileLocs : String, fileTimes : String) : (util.HashMap[String, Geo], util.ArrayList[String], Double) = {
-		val localCalendar = Calendar.getInstance(TimeZone.getDefault())
+		val localCalendar = Calendar.getInstance(TimeZone.getDefault)
 		val day = localCalendar.get(Calendar.DAY_OF_YEAR)
 		val year = localCalendar.get(Calendar.YEAR)
 
@@ -93,7 +93,7 @@ class LocationUtils extends Activity with TextToSpeech.OnInitListener {
 	var locationListener : LocationListener = null
 
 	def changeRate(urate:Int)={
-		locationManager.removeUpdates(locationListener);
+		locationManager.removeUpdates(locationListener)
 		locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, urate,	0, locationListener)
 	}
 
@@ -170,7 +170,7 @@ class LocationUtils extends Activity with TextToSpeech.OnInitListener {
 					 val vel = Round2(avgspeeds.foldLeft(0.0)(_+_) / avgspeeds.length,2)
 					 val d = calcDistLeft()
 					 val elapsed = Round(subtractDateToSeconds(new Date(), walkStarted)/60.0)
-					 val estm = if (vel == 0.0) "unknown" else {Round2((d/vel)/60., 2) + " minutes to go."}
+					 val estm = if (vel == 0.0) "unknown" else {Round2((d/vel)/60.0, 2) + " minutes to go."}
 					 txtv.setText("loc: " + lat + "," + long + "; inst speed: " + vel + "m/sec dist: " + diststr + "m " + "Total Dist: " + totDist + "m. Dist Left: " + Round2(d,2) + ". Time left: " + estm + ". Elapsed Time: " + elapsed) }
 			  else txtv.setText("please stay still. calibrating...claimed: " + diststr + "m/sec")
 
@@ -219,18 +219,18 @@ class LocationUtils extends Activity with TextToSpeech.OnInitListener {
 
 					if(addLocPresses > 0){
 						val lines = locmap.map(kv => {kv._1 + ";;" + kv._2.Latitude + ";;" + kv._2.Longitude}).toArray
-					  writeAllLines(fileLocs, lines,false)}
+					  writeAllLines(fileLocs, lines,doAppend = false)}
 					else writeAllLines(fileLocs, Array(s + ";;" + lastLat + ";;" + lastLong))
 
 					addLocPresses = 0
-				  createToast(getApplicationContext, s + " added.").show
+				  createToast(getApplicationContext, s + " added.").show()
 				}
 				else if (haskey && addLocPresses == 0){
 					addLocPresses+=1
-					createToast(getApplicationContext, "location exists already. press add again to replace").show
+					createToast(getApplicationContext, "location exists already. press add again to replace").show()
 				}
 				else{
-					createToast(getApplicationContext, "invalid co-ords. Set a short meter distance, wait for calibration then end walk.").show
+					createToast(getApplicationContext, "invalid co-ords. Set a short meter distance, wait for calibration then end walk.").show()
 				}
 
 			})
@@ -254,12 +254,12 @@ class LocationUtils extends Activity with TextToSpeech.OnInitListener {
 	    true}})
 
 		buttonCancelWalk.setOnClickListener(
-			(v : android.view.View) => {createToast(getApplicationContext, "long press to cancel").show})
+			(v : android.view.View) => {createToast(getApplicationContext, "long press to cancel").show()})
 
 	buttonEndWalk.setOnClickListener(
 			(v : android.view.View) => {
 				if(iscalibrated){
-					txtv.setText(txtv.getText() + "\n--------------\nstart walk to begin again.")
+					txtv.setText(txtv.getText + "\n--------------\nstart walk to begin again.")
 					locationManager.removeUpdates(locationListener)
 					val wstart = dateWrite.format(walkStarted)
 					val wend = dateWrite.format(new Date())
@@ -299,12 +299,12 @@ class LocationUtils extends Activity with TextToSpeech.OnInitListener {
 
 							locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0,	0, locationListener)}
 					  else{
-							createToast(getApplicationContext, "invalid loc").show}}
+							createToast(getApplicationContext, "invalid loc").show()}}
 				  catch{
-						case ex =>
+						case ex : Throwable =>
 							val txtv = findViewById(R.id.textViewLoc).asInstanceOf[TextView]
 							txtv.setText(ex.getMessage)}}
-			else createToast(getApplicationContext, "already running.").show
+			else createToast(getApplicationContext, "already running.").show()
 			})
 	}
 }
